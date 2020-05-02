@@ -2,7 +2,7 @@
 
 Hi guys, I complied five sets of data from the cdc: https://wwwn.cdc.gov/Nchs/Nhanes/Search/DataPage.aspx?Component=Questionnaire&CycleBeginYear=2017
 
-Below are the code books for each sets of data, 
+Below are the code books for each set of the data, 
 
 Mental Health - Depression Screener (DPQ_J)
 <https://wwwn.cdc.gov/Nchs/Nhanes/2017-2018/DPQ_J.htm>
