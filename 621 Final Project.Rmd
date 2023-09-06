@@ -1,0 +1,478 @@
+---
+title: "621 Final Project"
+author: "Katherine Evers"
+date: "5/7/2020"
+output: html_document
+---
+
+```{r packages, echo = FALSE, warning = FALSE, message = FALSE}
+library(tidyverse)
+library(ggplot2)
+library(pander)
+library(MASS)
+```
+
+1. DATA EXPLORATION 
+```{r}
+raw_data <- read.csv(url("https://raw.githubusercontent.com/KatherineEvers/data_621_final_project/master/data/df.csv"), header=TRUE)
+
+#summary stats
+sum_data <- summary(raw_data)
+pander(sum_data, split.table = 100, style = 'rmarkdown')
+
+#missing values
+raw_data %>%
+  summarise_all(list(~sum(is.na(.))))
+
+missing.values <- raw_data %>%
+    gather(key = "key", value = "val") %>%
+    mutate(is.missing = is.na(val)) %>%
+    group_by(key, is.missing) %>%
+    summarise(num.missing = n()) %>%
+    filter(is.missing==T) %>%
+    select(-is.missing) %>%
+    arrange(desc(num.missing)) 
+
+
+dfClean <- raw_data %>%
+        dplyr::filter(dpq010 <=3 & dpq020 <= 3 & dpq030 <= 3 &
+                              dpq040 <= 3 & dpq050 <= 3 & dpq060 <= 3 &
+                              dpq070 <= 3 & dpq080 <= 3 & dpq090 <= 3) %>%
+        dplyr::mutate(depressionScore = dpq010 + dpq020 + dpq030 +
+                              dpq040 + dpq050 + dpq060 +
+                              dpq070 + dpq080 + dpq090)
+
+metaData <- data.frame(field = names(raw_data),
+                       missing = colSums(is.na(raw_data)),
+                       class = sapply(raw_data, class) %>% unlist) %>%
+        dplyr::mutate(attribute = stringr::str_extract_all(field, pattern = "^[a-z]+") %>% unlist)
+
+depression_data <- raw_data %>%
+        filter(dpq010 <=3 & dpq020 <= 3 & dpq030 <= 3 &
+                              dpq040 <= 3 & dpq050 <= 3 & dpq060 <= 3 &
+                              dpq070 <= 3 & dpq080 <= 3 & dpq090 <= 3) %>%
+        mutate(depressionScore = dpq010 + dpq020 + dpq030 +
+                              dpq040 + dpq050 + dpq060 +
+                              dpq070 + dpq080 + dpq090)
+
+# depression score
+depressionScore <- df %>%
+        dplyr::select_at(vars(contains("seqn"), starts_with("dpq"))) %>%
+        dplyr::filter_at(vars(starts_with("dpq")), all_vars(. <=3)) %>%
+        dplyr::mutate(depressionScore = rowSums(select(., starts_with("dpq")))) %>%
+        dplyr::select(seqn, depressionScore)
+
+transformed_df <- depression_data %>%
+  
+# average daily hours of sleep
+sleepHrs <- df %>%
+        dplyr::select(seqn, sld012, sld013) %>%
+        dplyr::filter(!is.na(sld012) & !is.na(sld013)) %>%
+        dplyr::mutate(sleepHrs = (sld012 + sld013) / 2) %>%
+        dplyr::select(seqn, sleepHrs)
+
+# health status
+healthStatus <- df %>%
+        dplyr::select(seqn, hsd010) %>%
+        dplyr::filter(hsd010 <= 5) %>%
+        dplyr::mutate(healthStatus = dplyr::case_when(hsd010 == 1 ~ "Excellent",
+                                                      hsd010 == 2 ~ "Very good",
+                                                      hsd010 == 3 ~ "Good",
+                                                      hsd010 == 4 ~ "Fair",
+                                                      hsd010 == 5 ~ "Poor") %>%
+                              factor(., levels = c("Excellent", "Very good", "Good", "Fair", "Poor"))) %>%
+        dplyr::select(seqn, healthStatus)
+
+# sleepiness
+sleepiness <- df %>%
+        dplyr::select(seqn, slq120) %>%
+        dplyr::filter(slq120 <= 4) %>%
+        dplyr::mutate(sleepiness = dplyr::case_when(slq120 == 0 ~ "Never",
+                                                    slq120 == 1 ~ "Rarely",
+                                                    slq120 == 2 ~ "Sometimes",
+                                                    slq120 == 3 ~ "Often",
+                                                    slq120 == 4 ~ "Almost always") %>%
+                              factor(., levels = c("Never", "Rarely", "Sometimes", "Often", "Almost always"))) %>%
+        dplyr::select(seqn, sleepiness)
+
+
+limit_data <- raw_data[,c(2:16,18:19, 22, 25:33)]
+
+limit_data2 <- limit_data %>%
+        filter(dpq010 <=3 & dpq020 <= 3 & dpq030 <= 3 &
+                              dpq040 <= 3 & dpq050 <= 3 & dpq060 <= 3 &
+                              dpq070 <= 3 & dpq080 <= 3 & dpq090 <= 3 & smq020 <=3 & smq890 <=3 & smq900 <=3 & smq910 <=3 & hsd010 <=3 & hsq500 <=3 & hsq510 <=3 & hsq520 <=3 & hsq571 <=3 & hsq590 <=3 & slq030 <=3 & slq030 <=3 & slq120 <=3 & dpq010 <=3 & dpq020 <=3 & dpq030 <=3 & dpq040 <=3 & dpq050 <=3 & dpq060 <=3 & dpq070 <=3 & dpq080 <=3 & dpq090 <=3 & hsd010 <=5) %>%
+        mutate(depressionScore = dpq010 + dpq020 + dpq030 +
+                              dpq040 + dpq050 + dpq060 +
+                              dpq070 + dpq080 + dpq090)
+
+
+health_data <- raw_data %>%
+        filter(hsd010 <=5) %>%
+        mutate(depressionScore = dpq010 + dpq020 + dpq030 +
+                              dpq040 + dpq050 + dpq060 +
+                              dpq070 + dpq080 + dpq090)
+
+health_data2 <- health_data[,c(2:16,18:19, 22, 25:33)]
+
+summary(health_data)
+
+df <- complete_data %>% 
+  rename(
+    #ID = seqn,
+    do_things = dpq010, 
+    feel_down = dpq020,
+    sleep = dpq030,
+    tired = dpq040,
+    appetite =dpq050,
+    feel_bad =dpq060,
+    concentrate =dpq070,
+    moving=dpq080,
+    dead=dpq090,
+     gen_health= hsd010,
+      cold=hsq500,
+      stomach_illness=hsq510,
+      flu_pneu_ear=hsq520,
+      donate_blood=hsq571,
+      hiv=hsq590,
+      #data_source=hsaquex,
+      work_type=ocd150,
+      longest_work=ocd390g,
+      #sleep_time_weekday=slq300,
+      #wake_time_weekday=slq310,
+      sleep_hrs_weekday=sld012,
+      #sleep_time_weekend=slq320,
+      #wake_time_weekend=slq330,
+      sleep_hrs_weekend=sld013,
+      snore=slq030,
+     stop_breathing=slq040,
+    doc_sleep=slq050,
+    sleepy=slq120,
+    cigarettes_100=smq020,
+    cigar=smq890,
+    ecig=smq900,
+    tobacco=smq910
+     #questionnaire_flag=smaquex2
+    ) 
+
+health_data2$gen_health <- ordered(df$gen_health, levels = 1:5,
+                              labels = c("Excellant", "Very good", "Good","Fair", "Poor"))
+
+summary(health_data2)
+
+#missing values
+dfClean %>%
+  summarise_all(list(~sum(is.na(.))))
+
+missing.values <- df %>%
+    gather(key = "key", value = "val") %>%
+    mutate(is.missing = is.na(val)) %>%
+    group_by(key, is.missing) %>%
+    summarise(num.missing = n()) %>%
+    filter(is.missing==T) %>%
+    select(-is.missing) %>%
+    arrange(desc(num.missing)) 
+
+missing.values
+
+443/5533 #0.08
+
+histogram_data <- melt(df)
+ggplot(histogram_data, aes(value)) + 
+  geom_bar(fill = "blue") + 
+  facet_wrap(~variable, scales = "free") + 
+  geom_histogram(bins=50)
+
+#bar charts
+df2 <- df %>% mutate(
+    gen_health = as.factor(gen_health))
+
+g <- ggplot(df2, aes(do_things))
+g + geom_bar(aes(fill = gen_health)) + ggtitle("Interest in Doing Things") 
+
+g <- ggplot(df2, aes(feel_down))
+g + geom_bar(aes(fill = gen_health)) + ggtitle("Feeling down") 
+
+g <- ggplot(df2, aes(sleep))
+g + geom_bar(aes(fill = gen_health)) + ggtitle("Touble Sleeping") 
+
+g <- ggplot(df2, aes(tired))
+g + geom_bar(aes(fill = gen_health)) + ggtitle("Feel Tired") 
+
+g <- ggplot(df2, aes(appetite))
+g + geom_bar(aes(fill = gen_health)) + ggtitle("Appetite") 
+
+g <- ggplot(df2, aes(feel_bad))
+g + geom_bar(aes(fill = gen_health)) + ggtitle("Feel Bad") 
+
+g <- ggplot(df2, aes(tired))
+g + geom_bar(aes(fill = gen_health)) + ggtitle("Feel Tired") 
+
+g <- ggplot(df2, aes(tired))
+g + geom_bar(aes(fill = gen_health)) + ggtitle("Feel Tired") 
+
+library(RColorBrewer)
+# Define the number of colors you want
+nb.cols <- 26
+mycolors <- colorRampPalette(brewer.pal(8, "Set3"))(nb.cols)
+
+
+depression_data_bc <- depression_data %>% mutate(
+    depressionScore = as.factor(depressionScore))
+
+depression_data_bc$hsd010 <- ordered(depression_data_bc$hsd010, levels = 1:5,
+                              labels = c("Excellant", "Very good", "Good","Fair", "Poor"))
+
+ggplot(depression_data_bc, aes(depressionScore))+
+  geom_bar(aes(fill = depressionScore)) + 
+  ggtitle("Depression Scores")+
+   scale_fill_manual(values = mycolors)
+
+#***
+ggplot(depression_data_bc, aes(dpq030))+
+  geom_bar(aes(fill = depressionScore)) + 
+  ggtitle("Trouble Sleeping")+
+   scale_fill_manual(values = mycolors)
+#0 never
+
+#***
+ggplot(depression_data_bc, aes(dpq030))+
+  geom_bar(aes(fill = hsd010)) + 
+  ggtitle("Trouble Sleeping")+
+   scale_fill_manual(values = mycolors) 
+#0 never
+
+#***
+ggplot(depression_data_bc, aes(sld012)) +
+  geom_bar(aes(fill = depressionScore)) + 
+  ggtitle("Sleep Hours Weekday or Weekend") +
+  scale_fill_manual(values = mycolors) 
+
+#***
+ggplot(depression_data_bc, aes(sld012)) +
+  geom_bar(aes(fill = hsd010)) + 
+  ggtitle("Sleep Hours Weekday or Weekend") +
+  scale_fill_manual(values = mycolors) 
+
+depression_data_bc_2 <- depression_data_bc %>%
+        filter(slq050<=2 & slq120 <= 4 & slq120 <= 4)
+
+ggplot(depression_data_bc_2, aes(slq050))+
+  geom_bar(aes(fill = depressionScore)) + 
+  ggtitle("Ever Told Doctor Have Trouble Sleeping") +
+  scale_fill_manual(values = mycolors)
+#1 yes 2 no
+
+ggplot(depression_data_bc_2, aes(slq050))+
+  geom_bar(aes(fill = hsd010)) + 
+  ggtitle("Ever Told Doctor Have Trouble Sleeping") +
+  scale_fill_manual(values = mycolors)
+#1 yes 2 no
+
+
+ggplot(depression_data_bc_2, aes(slq120)) +
+ geom_bar(aes(fill = depressionScore)) + 
+  ggtitle("How Often feel Overly Sleepy") +
+  scale_fill_manual(values = mycolors) 
+
+ggplot(depression_data_bc_2, aes(slq120)) +
+ geom_bar(aes(fill = hsd010)) + 
+  ggtitle("How Often feel Overly Sleepy") +
+  scale_fill_manual(values = mycolors) 
+
+
+ggplot(depression_data_bc_2, aes(slq120)) +
+ geom_bar(aes(fill = hsd010)) + 
+  ggtitle("How Often Feeling Down, Depressed, or Hopeless") +
+  scale_fill_manual(values = mycolors) 
+
+dpq090
+
+#***
+ggplot(depression_data_bc, aes(hsd010)) +
+  geom_bar(aes(fill = depressionScore)) +
+  scale_fill_manual(values = mycolors) +
+  ggtitle("General Health") 
+  #coord_flip() +
+  #scale_y_discrete(breaks=c("1","2","3","4","5"),
+        #labels=c("Excellant", "Very good", "Good","Fair", "Poor"))
+
+
+#box plots
+distribution <- limit_data2 %>% 
+  dplyr::select(c("dpq010", 
+    "dpq020",
+    "dpq030",
+    "dpq040",
+    "dpq050",
+    "dpq060",
+    "dpq070",
+    "dpq080",
+    "dpq090",
+     #"hsd010",
+     # "hsq500",
+    #  "hsq510",
+     # "hsq520",
+    #  "hsq571",
+     # "hsq590",
+    #  "ocd150",
+      #sleep_time_weekday=slq300,
+      #wake_time_weekday=slq310,
+     # "sld012",
+      #sleep_time_weekend=slq320,
+      #wake_time_weekend=slq330,
+      #sleep_hrs_weekend=sld013,
+   # "slq050",
+  #  "slq120",
+  #  "smq020",
+   # "smq890",
+    #"smq900","smq910"
+  )) %>% 
+  gather(key, value) %>% 
+  mutate(value = as.integer(value),
+         key = as.factor(key))
+
+distribution <- limit_data2 %>% 
+  dplyr::select(c(
+     "hsd010",
+      "hsq500",
+      "hsq510",
+      "hsq520",
+      "hsq571",
+      "hsq590",
+      #"ocd150",
+      #sleep_time_weekday=slq300,
+      #wake_time_weekday=slq310,
+     # "sld012",
+      #sleep_time_weekend=slq320,
+      #wake_time_weekend=slq330,
+      #sleep_hrs_weekend=sld013,
+   # "slq050",
+  #  "slq120",
+  #  "smq020",
+   # "smq890",
+    #"smq900","smq910"
+  )) %>% 
+  gather(key, value) %>% 
+  mutate(value = as.integer(value),
+         key = as.factor(key))
+
+distribution <- limit_data2 %>% 
+  dplyr::select(c(
+    
+      #sleep_time_weekday=slq300,
+      #wake_time_weekday=slq310,
+     # "sld012",
+      #sleep_time_weekend=slq320,
+      #wake_time_weekend=slq330,
+      #sleep_hrs_weekend=sld013,
+   "slq050",
+    "slq120",
+    "smq020",
+    "smq890",
+    "smq900","smq910"
+  )) %>% 
+  gather(key, value) %>% 
+  mutate(value = as.integer(value),
+         key = as.factor(key))
+
+distribution <- df %>% 
+  dplyr::select(c(
+      "slq300",
+      "slq310",
+      "sld012",
+      "slq320",
+      "slq330",
+     "sld013"
+  )) %>% 
+  gather(key, value) %>% 
+  mutate(value = as.integer(value),
+         key = as.factor(key))
+
+distribution  %>% 
+  ggplot(aes(x = key, y = value)) +
+  geom_boxplot(aes()) +
+  facet_wrap(~ key, scales = 'free', ncol = 3) +
+  coord_flip()
+
+443/5533
+
+```
+
+```{r}
+#box plots
+df2<-health_data2[c(1:15,17, 20:27)]
+df3<-health_data2[c(16,18,19)]
+ggplot(stack(df2), aes(x = ind, y = values)) +
+  geom_boxplot()+ coord_flip() 
+ggplot(stack(df3), aes(x = ind, y = values)) +
+  geom_boxplot()+ coord_flip()
+
+
+
+#histograms
+histogram_data <- melt(df3)
+ggplot(histogram_data, aes(value)) + 
+  geom_bar(fill = "blue") + 
+  facet_wrap(~variable, scales = "free") + 
+  geom_histogram(bins=50)
+
+
+#correlation matrix
+data_cor = cor(health_data2)
+corrplot(data_cor, type = "lower")
+
+cor_data <- data.frame(lapply(health_data, function(x) as.numeric(as.factor(x))))
+corrplot(cor(dplyr::select(drop_na(cor_data), everything())), type = "lower")
+```
+
+2. DATA PREPARATION
+
+```{r}
+fillMissing <- function(x) replace(x, is.na(x), mean(x, na.rm = TRUE))
+complete_data <- replace(health_data2, TRUE, lapply(health_data2, fillMissing))
+```
+
+
+3. BUILD MODELS 
+
+```{r}
+glm(I(as.numeric(apply) >= 2) ~ pared, family="binomial", data = dat)
+
+#Dividing data into training and test set
+#Random sampling 
+samplesize = 0.60*nrow(df)
+set.seed(100)
+index = sample(seq_len(nrow(df)), size = samplesize)
+#Creating training and test set 
+datatrain = df[index,]
+datatest = df[-index,]
+
+#Build ordinal logistic regression model
+model= polr(gen_health ~ . , data = datatrain, Hess = TRUE)
+summary(model) #AIC: 3573.61 
+
+model_2= polr(gen_health ~  feel_down+feel_bad+ sleep+cigarettes_100+appetite, data = datatrain, Hess = TRUE)
+summary(model_2) #AIC: 13406.53 
+
+model_2= polr(gen_health ~  feel_down+feel_bad+ depressionScore, data = complete_data, Hess = TRUE)
+summary(model_2) #AIC: 3640.136 
+
+## store table
+(ctable <- coef(summary(model_2)))
+
+## calculate and store p values
+p <- pnorm(abs(ctable[, "t value"]), lower.tail = FALSE) * 2
+
+## combined table
+(ctable <- cbind(ctable, "p value" = p))
+
+
+#Compute confusion table and misclassification error
+predict = predict(model_2,datatest)
+table(datatest$gen_health, predict)
+mean(as.character(datatest$gen_health) != as.character(predict))
+```
+
+
+4. SELECT MODELS
